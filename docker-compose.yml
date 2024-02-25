@@ -1,0 +1,46 @@
+version: '3.4'
+
+services:
+  cms.api:
+    image: ${DOCKER_REGISTRY-}cmsapi
+    build:
+      context: .
+      dockerfile: CMS.Api/Dockerfile
+    depends_on:
+      - minio
+      - mongodb
+    ports:
+      - "5200:8080"
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio:/data
+    command: server --console-address :9001 /data
+
+  mongodb:
+    image: mongodb/mongodb-community-server
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb:/data
+
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  minio:
+    name: cms_minodb
+  mongodb:
+    name: cms_mongodb
