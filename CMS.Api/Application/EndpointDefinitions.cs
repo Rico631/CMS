@@ -16,7 +16,7 @@ public static class EndpointDefinitions
 
         group.InternalEndpoints();
 
-        group.NewsEndpoints();
+        group.MessageEndpoints();
 
         group.FileEndpoints();
 
@@ -62,9 +62,10 @@ public static class EndpointDefinitions
         return group;
     }
 
-    public static RouteGroupBuilder NewsEndpoints(this RouteGroupBuilder groupBuilder)
+    public static RouteGroupBuilder MessageEndpoints(this RouteGroupBuilder groupBuilder)
     {
         var group = groupBuilder.MapGroup("message").WithTags("Message");
+
         group.MapGet("/{companyId}",
             async (CancellationToken token, IMessageService service, string companyId) =>
             {
@@ -96,7 +97,8 @@ public static class EndpointDefinitions
             .WithName("CreateMessage")
             .Produces<MessageDto>();
 
-        group.MapPost("/{companyId}/{messageId}",
+
+        group.MapPost("/{companyId}/{messageId}/attachment",
             async (CancellationToken token, IMessageService service, string companyId, string messageId, [FromForm] IFormFile file) =>
             {
                 var result = await service.AddAttachmentAsync(companyId, messageId, file.FileName, file.ContentType, file.Length, file.OpenReadStream(), token);
@@ -117,6 +119,7 @@ public static class EndpointDefinitions
     public static RouteGroupBuilder FileEndpoints(this RouteGroupBuilder groupBuilder)
     {
         var group = groupBuilder.MapGroup("file").WithTags("File");
+
         group.MapGet("/attachment/{companyId}/{messageId}/{attachmentId}",
             async (CancellationToken token, IInternalService internalService, IStorageRepository storageRepository, string companyId, string messageId, string attachmentId) =>
             {
@@ -132,7 +135,8 @@ public static class EndpointDefinitions
 
                 return Results.File(result.Stream, contentType: result.ContentType, fileDownloadName: result.FileName);
             })
-            .WithName("GetAttachment");
+            .WithName("GetAttachment")
+            .CacheOutput();
 
         return group;
     }

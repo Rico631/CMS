@@ -60,8 +60,6 @@ public class MessageService(
         return await messageRepository.GetMessageByIdAsync<T>(company.Value, id, token);
     }
 
-
-
     public async Task<ErrorOr<Attachment>> AddAttachmentAsync(string companyId, string messageId, string fileName, string contentType, long size, Stream stream, CancellationToken token = default)
     {
         var company = await GetCompanyAsync(companyId, token);

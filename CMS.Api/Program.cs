@@ -1,12 +1,11 @@
-using Serilog.Events;
-using Serilog;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
 using CMS.Api.Application;
-using Minio;
 using CMS.Api.Application.Repositories;
-using MongoDB.Driver;
 using CMS.Api.Application.Services;
+using Minio;
+using MongoDB.Driver;
+using Serilog;
+using Serilog.Events;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 Log.Logger = new LoggerConfiguration()
@@ -58,6 +57,18 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.Configuration = "redis:6379";
 });
 
+builder.Services.AddStackExchangeRedisOutputCache(options =>
+{
+    options.Configuration = "redis:6379";
+    options.InstanceName = "OutputCache";
+});
+
+builder.Services.AddOutputCache(options =>
+{
+    options.AddBasePolicy(builder => builder.Expire(TimeSpan.FromSeconds(10)));
+});
+
+
 builder.Services.AddScoped((sp) =>
     new MinioClient()
         .WithEndpoint("minio:9000")
@@ -71,14 +82,10 @@ builder.Services.AddScoped<IStorageRepository, StorageRepository>();
 builder.Services.AddScoped<IInternalRepository, InternalRepository>();
 builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 
-
 builder.Services.Decorate<IInternalRepository, CachedInternalRepository>();
-
 
 builder.Services.AddScoped<IInternalService,  InternalService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
-
-
 
 
 
@@ -91,32 +98,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+app.UseOutputCache();
 
 
 app.RegisterEndpoints();
-
 app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
